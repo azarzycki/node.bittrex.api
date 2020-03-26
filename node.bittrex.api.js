@@ -16,7 +16,8 @@ var NodeBittrexApi = function(options) {
     jsonic = require('jsonic'),
     signalR = require('signalr-client'),
     wsclient,
-    cloudscraper = require('cloudscraper');
+    cloudscraper = require('cloudscraper'),
+    Crypto = require('crypto');
 
   var default_request_options = {
     method: 'GET',
@@ -291,6 +292,20 @@ var NodeBittrexApi = function(options) {
           return true;
         },
         connected: function() {
+          wsclient.call('CoreHub', 'GetAuthContext', opts.apikey).done(function(err, result) {
+            if (err) {
+              return console.error(err);
+            }
+            console.log('wsclient.GetAuthContext',result)
+
+            wsclient.call('CoreHub', 'Authenticate', opts.apikey, Crypto.createHmac('sha512', opts.apisecret).update(result).digest('hex') ).done(function(err,result){
+              if (err) {
+                return console.error(err);
+              }
+              console.log('wsclient.Authenticate',result)
+            })
+          });
+          
           if (websocketGlobalTickers) {
             wsclient.call('CoreHub', 'SubscribeToSummaryDeltas').done(function(err, result) {
               if (err) {
